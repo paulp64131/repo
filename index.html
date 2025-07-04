@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClickCal Event Creator</title>
+  <title>ClickCal Ultimate</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React 17 -->
@@ -24,11 +24,13 @@
       const [location, setLocation] = useState('');
       const [description, setDescription] = useState('');
       const [includeZoom, setIncludeZoom] = useState(false);
+      const [isRecurring, setIsRecurring] = useState(false);
+      const [recurringType, setRecurringType] = useState('DAILY');
+      const [recurringCount, setRecurringCount] = useState('1');
       const [message, setMessage] = useState('');
 
       var ZOOM_LINK = 'https://us04web.zoom.us/j/71280888309?pwd=sWykxtaRigTGbe6fBFauqfDCHmR45g.1';
 
-      // Auto-update location when Zoom is toggled
       useEffect(function() {
         if (includeZoom) {
           if (location.indexOf(ZOOM_LINK) === -1) {
@@ -63,6 +65,9 @@
         if (description !== '') {
           params.set('details', description);
         }
+        if (isRecurring) {
+          params.set('recur', 'RRULE:FREQ=' + recurringType + ';COUNT=' + recurringCount);
+        }
         return 'https://calendar.google.com/calendar/render?' + params.toString();
       }
 
@@ -82,7 +87,6 @@
       return React.createElement('div', { className: 'max-w-md mx-auto mt-10 bg-white shadow p-6 rounded' },
         React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, '📅 Create Calendar Event'),
 
-        // Title
         React.createElement('input', {
           className: 'w-full border p-2 mb-3',
           placeholder: 'Event Title *',
@@ -90,7 +94,6 @@
           onChange: function(e) { setTitle(e.target.value); }
         }),
 
-        // Start Date/Time
         React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
           React.createElement('input', {
             type: 'date',
@@ -106,7 +109,6 @@
           })
         ),
 
-        // End Date/Time
         React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
           React.createElement('input', {
             type: 'date',
@@ -122,7 +124,6 @@
           })
         ),
 
-        // Zoom Toggle
         React.createElement('label', { className: 'flex items-center mb-3' },
           React.createElement('input', {
             type: 'checkbox',
@@ -132,7 +133,34 @@
           React.createElement('span', { className: 'ml-2' }, 'Include Zoom Link')
         ),
 
-        // Location
+        React.createElement('label', { className: 'flex items-center mb-3' },
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: isRecurring,
+            onChange: function(e) { setIsRecurring(e.target.checked); }
+          }),
+          React.createElement('span', { className: 'ml-2' }, 'Recurring Event')
+        ),
+
+        isRecurring && React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
+          React.createElement('select', {
+            className: 'border p-2',
+            value: recurringType,
+            onChange: function(e) { setRecurringType(e.target.value); }
+          },
+            React.createElement('option', { value: 'DAILY' }, 'Daily'),
+            React.createElement('option', { value: 'WEEKLY' }, 'Weekly'),
+            React.createElement('option', { value: 'MONTHLY' }, 'Monthly')
+          ),
+          React.createElement('input', {
+            type: 'number',
+            min: '1',
+            className: 'border p-2',
+            value: recurringCount,
+            onChange: function(e) { setRecurringCount(e.target.value); }
+          })
+        ),
+
         React.createElement('input', {
           className: 'w-full border p-2 mb-3',
           placeholder: 'Location',
@@ -140,7 +168,6 @@
           onChange: function(e) { setLocation(e.target.value); }
         }),
 
-        // Description
         React.createElement('textarea', {
           className: 'w-full border p-2 mb-3',
           placeholder: 'Description',
@@ -149,14 +176,12 @@
           onChange: function(e) { setDescription(e.target.value); }
         }),
 
-        // Button
         React.createElement('button', {
           className: 'w-full bg-blue-600 text-white p-2 rounded disabled:opacity-50',
           disabled: !isComplete,
           onClick: copyLink
         }, 'Copy Google Calendar Link'),
 
-        // Preview Link
         googleLink && React.createElement('div', { className: 'mt-3' },
           React.createElement('a', {
             href: googleLink,
@@ -165,7 +190,6 @@
           }, 'Preview Calendar Link')
         ),
 
-        // Message
         message && React.createElement('p', { className: 'mt-3 text-green-600' }, message)
       );
     }
