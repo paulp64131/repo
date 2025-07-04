@@ -3,122 +3,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClickCal - Event Creator</title>
+  <title>ClickCal Event Creator</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React 17 UMD -->
+  <!-- React 17 -->
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-100">
   <div id="root"></div>
   <script>
-    const { useState } = React;
+    const { useState, useEffect } = React;
 
     function App() {
-      const [eventData, setEventData] = useState({
-        title: "",
-        startDate: "",
-        startTime: "",
-        endDate: "",
-        endTime: ""
-      });
-      const [toastMessage, setToastMessage] = useState("");
-      const [showToast, setShowToast] = useState(false);
+      const [title, setTitle] = useState('');
+      const [startDate, setStartDate] = useState('');
+      const [startTime, setStartTime] = useState('');
+      const [endDate, setEndDate] = useState('');
+      const [endTime, setEndTime] = useState('');
+      const [location, setLocation] = useState('');
+      const [description, setDescription] = useState('');
+      const [includeZoom, setIncludeZoom] = useState(false);
+      const [message, setMessage] = useState('');
 
-      function updateField(field, value) {
-        setEventData((prev) => ({ ...prev, [field]: value }));
-      }
+      var ZOOM_LINK = 'https://us04web.zoom.us/j/71280888309?pwd=sWykxtaRigTGbe6fBFauqfDCHmR45g.1';
+
+      // Auto-update location when Zoom is toggled
+      useEffect(function() {
+        if (includeZoom) {
+          if (location.indexOf(ZOOM_LINK) === -1) {
+            setLocation(location ? location + " | Zoom: " + ZOOM_LINK : "Zoom: " + ZOOM_LINK);
+          }
+        } else {
+          if (location.indexOf(ZOOM_LINK) !== -1) {
+            setLocation(location.replace(" | Zoom: " + ZOOM_LINK, "").replace("Zoom: " + ZOOM_LINK, "").trim());
+          }
+        }
+      }, [includeZoom]);
 
       function formatDateTime(date, time) {
-        if (!date || !time) return "";
-        const dt = new Date(\`\${date}T\${time}\`);
-        return dt.toISOString().replace(/[-:]/g, "").replace(/\\.\\d{3}/, "");
+        if (!date || !time) return '';
+        var dt = new Date(date + "T" + time);
+        return dt.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
       }
 
-      function createGoogleUrl() {
-        const start = formatDateTime(eventData.startDate, eventData.startTime);
-        const end = formatDateTime(eventData.endDate, eventData.endTime);
-        const params = new URLSearchParams({
-          action: "TEMPLATE",
-          text: eventData.title,
-          dates: \`\${start}/\${end}\`
-        });
-        return \`https://calendar.google.com/calendar/render?\${params}\`;
+      function buildGoogleLink() {
+        var start = formatDateTime(startDate, startTime);
+        var end = formatDateTime(endDate, endTime);
+        if (!start || !end || title === '') {
+          return '';
+        }
+        var params = new URLSearchParams();
+        params.set('action', 'TEMPLATE');
+        params.set('text', title);
+        params.set('dates', start + '/' + end);
+        if (location !== '') {
+          params.set('location', location);
+        }
+        if (description !== '') {
+          params.set('details', description);
+        }
+        return 'https://calendar.google.com/calendar/render?' + params.toString();
       }
 
-      async function copyLink() {
-        const url = createGoogleUrl();
-        if (!url) {
-          setToastMessage("Please fill in all fields.");
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 3000);
+      function copyLink() {
+        var link = buildGoogleLink();
+        if (!link) {
+          setMessage('Please fill in all required fields.');
           return;
         }
-        try {
-          await navigator.clipboard.writeText(url);
-          setToastMessage("Link copied to clipboard!");
-        } catch {
-          setToastMessage("Copy failed. Select manually.");
-        }
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+        navigator.clipboard.writeText(link);
+        setMessage('Copied link to clipboard!');
       }
 
-      const isComplete = eventData.title && eventData.startDate && eventData.startTime && eventData.endDate && eventData.endTime;
+      var googleLink = buildGoogleLink();
+      var isComplete = title && startDate && startTime && endDate && endTime;
 
-      return React.createElement(
-        "div",
-        { className: "max-w-md mx-auto p-6 bg-white shadow rounded mt-10" },
-        React.createElement("h1", { className: "text-2xl font-bold mb-4" }, "📅 Create Event Link"),
-        React.createElement("input", {
-          className: "border w-full p-2 mb-3",
-          placeholder: "Event Title",
-          value: eventData.title,
-          onChange: (e) => updateField("title", e.target.value)
+      return React.createElement('div', { className: 'max-w-md mx-auto mt-10 bg-white shadow p-6 rounded' },
+        React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, '📅 Create Calendar Event'),
+
+        // Title
+        React.createElement('input', {
+          className: 'w-full border p-2 mb-3',
+          placeholder: 'Event Title *',
+          value: title,
+          onChange: function(e) { setTitle(e.target.value); }
         }),
-        React.createElement("div", { className: "grid grid-cols-2 gap-2 mb-3" },
-          React.createElement("input", {
-            className: "border p-2",
-            type: "date",
-            value: eventData.startDate,
-            onChange: (e) => updateField("startDate", e.target.value)
+
+        // Start Date/Time
+        React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
+          React.createElement('input', {
+            type: 'date',
+            className: 'border p-2',
+            value: startDate,
+            onChange: function(e) { setStartDate(e.target.value); }
           }),
-          React.createElement("input", {
-            className: "border p-2",
-            type: "time",
-            value: eventData.startTime,
-            onChange: (e) => updateField("startTime", e.target.value)
+          React.createElement('input', {
+            type: 'time',
+            className: 'border p-2',
+            value: startTime,
+            onChange: function(e) { setStartTime(e.target.value); }
           })
         ),
-        React.createElement("div", { className: "grid grid-cols-2 gap-2 mb-4" },
-          React.createElement("input", {
-            className: "border p-2",
-            type: "date",
-            value: eventData.endDate,
-            onChange: (e) => updateField("endDate", e.target.value)
+
+        // End Date/Time
+        React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
+          React.createElement('input', {
+            type: 'date',
+            className: 'border p-2',
+            value: endDate,
+            onChange: function(e) { setEndDate(e.target.value); }
           }),
-          React.createElement("input", {
-            className: "border p-2",
-            type: "time",
-            value: eventData.endTime,
-            onChange: (e) => updateField("endTime", e.target.value)
+          React.createElement('input', {
+            type: 'time',
+            className: 'border p-2',
+            value: endTime,
+            onChange: function(e) { setEndTime(e.target.value); }
           })
         ),
-        React.createElement("button", {
-          className: \`w-full p-2 rounded text-white \${isComplete ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}\`,
+
+        // Zoom Toggle
+        React.createElement('label', { className: 'flex items-center mb-3' },
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: includeZoom,
+            onChange: function(e) { setIncludeZoom(e.target.checked); }
+          }),
+          React.createElement('span', { className: 'ml-2' }, 'Include Zoom Link')
+        ),
+
+        // Location
+        React.createElement('input', {
+          className: 'w-full border p-2 mb-3',
+          placeholder: 'Location',
+          value: location,
+          onChange: function(e) { setLocation(e.target.value); }
+        }),
+
+        // Description
+        React.createElement('textarea', {
+          className: 'w-full border p-2 mb-3',
+          placeholder: 'Description',
+          rows: 2,
+          value: description,
+          onChange: function(e) { setDescription(e.target.value); }
+        }),
+
+        // Button
+        React.createElement('button', {
+          className: 'w-full bg-blue-600 text-white p-2 rounded disabled:opacity-50',
           disabled: !isComplete,
           onClick: copyLink
-        }, "Copy Google Calendar Link"),
-        showToast && React.createElement("div", {
-          className: "mt-4 p-2 bg-green-500 text-white text-center rounded"
-        }, toastMessage)
+        }, 'Copy Google Calendar Link'),
+
+        // Preview Link
+        googleLink && React.createElement('div', { className: 'mt-3' },
+          React.createElement('a', {
+            href: googleLink,
+            target: '_blank',
+            className: 'text-blue-600 underline'
+          }, 'Preview Calendar Link')
+        ),
+
+        // Message
+        message && React.createElement('p', { className: 'mt-3 text-green-600' }, message)
       );
     }
 
     ReactDOM.render(
       React.createElement(App),
-      document.getElementById("root")
+      document.getElementById('root')
     );
   </script>
 </body>
