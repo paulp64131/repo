@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClickCal Safe</title>
+  <title>ClickCal Complete</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
@@ -26,6 +26,7 @@
       const [recurringType, setRecurringType] = useState('DAILY');
       const [recurringCount, setRecurringCount] = useState('1');
       const [message, setMessage] = useState('');
+      const [embedCode, setEmbedCode] = useState('');
 
       var ZOOM_LINK = 'https://us04web.zoom.us/j/your-link';
 
@@ -50,9 +51,7 @@
       function buildGoogleLink() {
         var start = formatDateTime(startDate, startTime);
         var end = formatDateTime(endDate, endTime);
-        if (!start || !end || title === '') {
-          return null;
-        }
+        if (!start || !end || title === '') return null;
         var params = new URLSearchParams();
         params.set('action', 'TEMPLATE');
         params.set('text', title);
@@ -107,14 +106,29 @@
         a.click();
       }
 
-      function copyGoogleLink() {
-        var link = buildGoogleLink();
-        if (!link) {
-          setMessage('Fill all fields.');
+      function generateEmbed() {
+        var gLink = buildGoogleLink();
+        var oLink = buildOutlookLink();
+        if (!gLink || !oLink) {
+          setMessage('Fill all required fields.');
           return;
         }
-        navigator.clipboard.writeText(link);
-        setMessage('Copied Google Calendar link!');
+        var html =
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+          '<a href="' + gLink + '" target="_blank" style="background:#4285f4;color:white;padding:8px 12px;text-decoration:none;border-radius:4px;">Google Calendar</a>' +
+          '<a href="' + oLink + '" target="_blank" style="background:#0078d4;color:white;padding:8px 12px;text-decoration:none;border-radius:4px;">Outlook Calendar</a>';
+        if (includeZoom) {
+          html += '<a href="' + ZOOM_LINK + '" target="_blank" style="background:#2d8cff;color:white;padding:8px 12px;text-decoration:none;border-radius:4px;">Join Zoom</a>';
+        }
+        html += '</div>';
+        setEmbedCode(html);
+        setMessage('Embed code generated!');
+      }
+
+      function copyEmbed() {
+        if (!embedCode) return;
+        navigator.clipboard.writeText(embedCode);
+        setMessage('Embed code copied!');
       }
 
       var googleLink = buildGoogleLink();
@@ -122,72 +136,57 @@
       var isComplete = title && startDate && startTime && endDate && endTime;
 
       return React.createElement('div', { className: 'max-w-md mx-auto mt-10 bg-white shadow p-6 rounded' },
-        React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, '📅 Calendar Event'),
+        React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, '📅 Event with All Buttons'),
 
-        React.createElement('input', {
-          className: 'w-full border p-2 mb-3',
-          placeholder: 'Event Title *',
-          value: title,
-          onChange: function(e) { setTitle(e.target.value); }
-        }),
-
+        React.createElement('input', { className: 'w-full border p-2 mb-3', placeholder: 'Event Title *', value: title, onChange: e => setTitle(e.target.value) }),
         React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-          React.createElement('input', { type: 'date', className: 'border p-2', value: startDate, onChange: function(e) { setStartDate(e.target.value); } }),
-          React.createElement('input', { type: 'time', className: 'border p-2', value: startTime, onChange: function(e) { setStartTime(e.target.value); } })
+          React.createElement('input', { type: 'date', className: 'border p-2', value: startDate, onChange: e => setStartDate(e.target.value) }),
+          React.createElement('input', { type: 'time', className: 'border p-2', value: startTime, onChange: e => setStartTime(e.target.value) })
         ),
-
         React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-          React.createElement('input', { type: 'date', className: 'border p-2', value: endDate, onChange: function(e) { setEndDate(e.target.value); } }),
-          React.createElement('input', { type: 'time', className: 'border p-2', value: endTime, onChange: function(e) { setEndTime(e.target.value); } })
+          React.createElement('input', { type: 'date', className: 'border p-2', value: endDate, onChange: e => setEndDate(e.target.value) }),
+          React.createElement('input', { type: 'time', className: 'border p-2', value: endTime, onChange: e => setEndTime(e.target.value) })
         ),
 
         React.createElement('label', { className: 'flex items-center mb-3' },
-          React.createElement('input', { type: 'checkbox', checked: includeZoom, onChange: function(e) { setIncludeZoom(e.target.checked); } }),
+          React.createElement('input', { type: 'checkbox', checked: includeZoom, onChange: e => setIncludeZoom(e.target.checked) }),
           React.createElement('span', { className: 'ml-2' }, 'Include Zoom Link')
         ),
-
         React.createElement('label', { className: 'flex items-center mb-3' },
-          React.createElement('input', { type: 'checkbox', checked: isRecurring, onChange: function(e) { setIsRecurring(e.target.checked); } }),
+          React.createElement('input', { type: 'checkbox', checked: isRecurring, onChange: e => setIsRecurring(e.target.checked) }),
           React.createElement('span', { className: 'ml-2' }, 'Recurring Event')
         ),
-
         isRecurring ? React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-          React.createElement('select', { className: 'border p-2', value: recurringType, onChange: function(e) { setRecurringType(e.target.value); } },
+          React.createElement('select', { className: 'border p-2', value: recurringType, onChange: e => setRecurringType(e.target.value) },
             React.createElement('option', { value: 'DAILY' }, 'Daily'),
             React.createElement('option', { value: 'WEEKLY' }, 'Weekly'),
             React.createElement('option', { value: 'MONTHLY' }, 'Monthly')
           ),
-          React.createElement('input', { type: 'number', min: '1', className: 'border p-2', value: recurringCount, onChange: function(e) { setRecurringCount(e.target.value); } })
+          React.createElement('input', { type: 'number', min: '1', className: 'border p-2', value: recurringCount, onChange: e => setRecurringCount(e.target.value) })
         ) : null,
 
-        React.createElement('input', { className: 'w-full border p-2 mb-3', placeholder: 'Location', value: location, onChange: function(e) { setLocation(e.target.value); } }),
-        React.createElement('textarea', { className: 'w-full border p-2 mb-3', placeholder: 'Description', rows: 2, value: description, onChange: function(e) { setDescription(e.target.value); } }),
+        React.createElement('input', { className: 'w-full border p-2 mb-3', placeholder: 'Location', value: location, onChange: e => setLocation(e.target.value) }),
+        React.createElement('textarea', { className: 'w-full border p-2 mb-3', placeholder: 'Description', rows: 2, value: description, onChange: e => setDescription(e.target.value) }),
 
-        React.createElement('div', { className: 'grid grid-cols-1 gap-2 mb-3' },
-          React.createElement('button', {
-            className: 'w-full bg-blue-600 text-white p-2 rounded disabled:opacity-50',
-            disabled: !isComplete,
-            onClick: copyGoogleLink
-          }, 'Copy Google Calendar Link'),
+        // The big block of live buttons
+        isComplete ? React.createElement('div', { className: 'grid grid-cols-1 gap-2 mb-3' }, 
+          React.createElement('a', { href: googleLink, target: '_blank', className: 'w-full bg-blue-500 text-white text-center p-2 rounded block' }, 'Open Google Calendar'),
+          React.createElement('a', { href: outlookLink, target: '_blank', className: 'w-full bg-indigo-500 text-white text-center p-2 rounded block' }, 'Open Outlook Calendar'),
+          includeZoom ? React.createElement('a', { href: ZOOM_LINK, target: '_blank', className: 'w-full bg-blue-400 text-white text-center p-2 rounded block' }, 'Join Zoom Meeting') : null,
+          React.createElement('button', { className: 'w-full bg-green-600 text-white p-2 rounded', onClick: downloadICS }, 'Download .ics for Apple Calendar')
+        ) : null,
 
-          googleLink ? React.createElement('a', { href: googleLink, target: '_blank', className: 'w-full bg-blue-500 text-white text-center p-2 rounded block' }, 'Open Google Calendar') : null,
-
-          outlookLink ? React.createElement('a', { href: outlookLink, target: '_blank', className: 'w-full bg-indigo-500 text-white text-center p-2 rounded block' }, 'Open Outlook Calendar') : null,
-
-          isComplete ? React.createElement('button', {
-            className: 'w-full bg-green-600 text-white p-2 rounded',
-            onClick: downloadICS
-          }, 'Download .ics for Apple Calendar') : null
-        ),
+        React.createElement('button', { className: 'w-full bg-blue-600 text-white p-2 rounded mb-2', disabled: !isComplete, onClick: generateEmbed }, 'Generate Embed Code'),
+        embedCode ? React.createElement('div', {},
+          React.createElement('textarea', { className: 'w-full border p-2 mb-2 text-xs', rows: 4, readOnly: true, value: embedCode }),
+          React.createElement('button', { className: 'w-full bg-green-600 text-white p-2 rounded', onClick: copyEmbed }, 'Copy Embed Code')
+        ) : null,
 
         message ? React.createElement('p', { className: 'mt-3 text-green-600' }, message) : null
       );
     }
 
-    ReactDOM.render(
-      React.createElement(App),
-      document.getElementById('root')
-    );
+    ReactDOM.render(React.createElement(App), document.getElementById('root'));
   </script>
 </body>
 </html>
