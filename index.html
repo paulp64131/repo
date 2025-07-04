@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClickCal Ultimate</title>
+  <title>ClickCal Complete</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React 17 -->
@@ -71,21 +71,80 @@
         return 'https://calendar.google.com/calendar/render?' + params.toString();
       }
 
-      function copyLink() {
+      function buildOutlookLink() {
+        var start = new Date(startDate + "T" + startTime).toISOString();
+        var end = new Date(endDate + "T" + endTime).toISOString();
+        if (!startDate || !startTime || !title) {
+          return '';
+        }
+        var params = new URLSearchParams();
+        params.set('path', '/calendar/action/compose');
+        params.set('rru', 'addevent');
+        params.set('subject', title);
+        params.set('startdt', start);
+        params.set('enddt', end);
+        if (location !== '') {
+          params.set('location', location);
+        }
+        if (description !== '') {
+          params.set('body', description);
+        }
+        return 'https://outlook.live.com/calendar/0/deeplink/compose?' + params.toString();
+      }
+
+      function buildICS() {
+        var start = formatDateTime(startDate, startTime);
+        var end = formatDateTime(endDate, endTime);
+        if (!start || !end || title === '') {
+          return '';
+        }
+        var ics = 'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\n';
+        ics += 'DTSTART:' + start + '\n';
+        ics += 'DTEND:' + end + '\n';
+        ics += 'SUMMARY:' + title + '\n';
+        if (description !== '') {
+          ics += 'DESCRIPTION:' + description + '\n';
+        }
+        if (location !== '') {
+          ics += 'LOCATION:' + location + '\n';
+        }
+        if (isRecurring) {
+          ics += 'RRULE:FREQ=' + recurringType + ';COUNT=' + recurringCount + '\n';
+        }
+        ics += 'END:VEVENT\nEND:VCALENDAR';
+        return ics;
+      }
+
+      function downloadICS() {
+        var content = buildICS();
+        if (!content) {
+          setMessage('Fill all required fields.');
+          return;
+        }
+        var blob = new Blob([content], { type: 'text/calendar' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'event.ics';
+        a.click();
+      }
+
+      function copyGoogleLink() {
         var link = buildGoogleLink();
         if (!link) {
           setMessage('Please fill in all required fields.');
           return;
         }
         navigator.clipboard.writeText(link);
-        setMessage('Copied link to clipboard!');
+        setMessage('Copied Google Calendar link!');
       }
 
       var googleLink = buildGoogleLink();
+      var outlookLink = buildOutlookLink();
       var isComplete = title && startDate && startTime && endDate && endTime;
 
       return React.createElement('div', { className: 'max-w-md mx-auto mt-10 bg-white shadow p-6 rounded' },
-        React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, '📅 Create Calendar Event'),
+        React.createElement('h1', { className: 'text-2xl font-bold mb-4' }, '📅 Full Calendar Event'),
 
         React.createElement('input', {
           className: 'w-full border p-2 mb-3',
@@ -95,99 +154,53 @@
         }),
 
         React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-          React.createElement('input', {
-            type: 'date',
-            className: 'border p-2',
-            value: startDate,
-            onChange: function(e) { setStartDate(e.target.value); }
-          }),
-          React.createElement('input', {
-            type: 'time',
-            className: 'border p-2',
-            value: startTime,
-            onChange: function(e) { setStartTime(e.target.value); }
-          })
+          React.createElement('input', { type: 'date', className: 'border p-2', value: startDate, onChange: function(e) { setStartDate(e.target.value); } }),
+          React.createElement('input', { type: 'time', className: 'border p-2', value: startTime, onChange: function(e) { setStartTime(e.target.value); } })
         ),
 
         React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-          React.createElement('input', {
-            type: 'date',
-            className: 'border p-2',
-            value: endDate,
-            onChange: function(e) { setEndDate(e.target.value); }
-          }),
-          React.createElement('input', {
-            type: 'time',
-            className: 'border p-2',
-            value: endTime,
-            onChange: function(e) { setEndTime(e.target.value); }
-          })
+          React.createElement('input', { type: 'date', className: 'border p-2', value: endDate, onChange: function(e) { setEndDate(e.target.value); } }),
+          React.createElement('input', { type: 'time', className: 'border p-2', value: endTime, onChange: function(e) { setEndTime(e.target.value); } })
         ),
 
         React.createElement('label', { className: 'flex items-center mb-3' },
-          React.createElement('input', {
-            type: 'checkbox',
-            checked: includeZoom,
-            onChange: function(e) { setIncludeZoom(e.target.checked); }
-          }),
+          React.createElement('input', { type: 'checkbox', checked: includeZoom, onChange: function(e) { setIncludeZoom(e.target.checked); } }),
           React.createElement('span', { className: 'ml-2' }, 'Include Zoom Link')
         ),
 
         React.createElement('label', { className: 'flex items-center mb-3' },
-          React.createElement('input', {
-            type: 'checkbox',
-            checked: isRecurring,
-            onChange: function(e) { setIsRecurring(e.target.checked); }
-          }),
+          React.createElement('input', { type: 'checkbox', checked: isRecurring, onChange: function(e) { setIsRecurring(e.target.checked); } }),
           React.createElement('span', { className: 'ml-2' }, 'Recurring Event')
         ),
 
         isRecurring && React.createElement('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
-          React.createElement('select', {
-            className: 'border p-2',
-            value: recurringType,
-            onChange: function(e) { setRecurringType(e.target.value); }
-          },
+          React.createElement('select', { className: 'border p-2', value: recurringType, onChange: function(e) { setRecurringType(e.target.value); } },
             React.createElement('option', { value: 'DAILY' }, 'Daily'),
             React.createElement('option', { value: 'WEEKLY' }, 'Weekly'),
             React.createElement('option', { value: 'MONTHLY' }, 'Monthly')
           ),
-          React.createElement('input', {
-            type: 'number',
-            min: '1',
-            className: 'border p-2',
-            value: recurringCount,
-            onChange: function(e) { setRecurringCount(e.target.value); }
-          })
+          React.createElement('input', { type: 'number', min: '1', className: 'border p-2', value: recurringCount, onChange: function(e) { setRecurringCount(e.target.value); } })
         ),
 
-        React.createElement('input', {
-          className: 'w-full border p-2 mb-3',
-          placeholder: 'Location',
-          value: location,
-          onChange: function(e) { setLocation(e.target.value); }
-        }),
+        React.createElement('input', { className: 'w-full border p-2 mb-3', placeholder: 'Location', value: location, onChange: function(e) { setLocation(e.target.value); } }),
+        React.createElement('textarea', { className: 'w-full border p-2 mb-3', placeholder: 'Description', rows: 2, value: description, onChange: function(e) { setDescription(e.target.value); } }),
 
-        React.createElement('textarea', {
-          className: 'w-full border p-2 mb-3',
-          placeholder: 'Description',
-          rows: 2,
-          value: description,
-          onChange: function(e) { setDescription(e.target.value); }
-        }),
+        React.createElement('div', { className: 'grid grid-cols-1 gap-2 mb-3' },
+          React.createElement('button', {
+            className: 'w-full bg-blue-600 text-white p-2 rounded disabled:opacity-50',
+            disabled: !isComplete,
+            onClick: copyGoogleLink
+          }, 'Copy Google Calendar Link'),
 
-        React.createElement('button', {
-          className: 'w-full bg-blue-600 text-white p-2 rounded disabled:opacity-50',
-          disabled: !isComplete,
-          onClick: copyLink
-        }, 'Copy Google Calendar Link'),
+          googleLink && React.createElement('a', { href: googleLink, target: '_blank', className: 'w-full bg-blue-500 text-white text-center p-2 rounded block' }, 'Open Google Calendar'),
 
-        googleLink && React.createElement('div', { className: 'mt-3' },
-          React.createElement('a', {
-            href: googleLink,
-            target: '_blank',
-            className: 'text-blue-600 underline'
-          }, 'Preview Calendar Link')
+          outlookLink && React.createElement('a', { href: outlookLink, target: '_blank', className: 'w-full bg-indigo-500 text-white text-center p-2 rounded block' }, 'Open Outlook Calendar'),
+
+          React.createElement('button', {
+            className: 'w-full bg-green-600 text-white p-2 rounded',
+            disabled: !isComplete,
+            onClick: downloadICS
+          }, 'Download .ics for Apple Calendar')
         ),
 
         message && React.createElement('p', { className: 'mt-3 text-green-600' }, message)
